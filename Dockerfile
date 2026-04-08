@@ -1,0 +1,68 @@
+FROM quay.io/keycloak/keycloak:latest as builder
+
+ENV OPERATOR_KEYCLOAK_IMAGE=quay.io/keycloak/keycloak:latest
+
+ARG ADMIN
+ARG ADMIN_PASSWORD
+ARG DB_USERNAME
+ARG DB_PASSWORD
+ARG DB_URL
+ARG DB_DATABASE
+ARG DB_PORT
+
+ENV KC_HTTP_RELATIVE_PATH=/auth
+ENV PROXY_ADDRESS_FORWARDING=true
+ENV KC_DB_USERNAME=$DB_USERNAME
+ENV KC_DB_PASSWORD=$DB_PASSWORD
+ENV KC_HOSTNAME_STRICT=false
+ENV KC_HOSTNAME=your-service-name.onrender.com
+ENV KC_HOSTNAME_ADMIN=your-service-name.onrender.com
+ENV KC_HTTP_ENABLED=true
+ENV KC_HTTP_PORT=8443
+ENV KC_HTTPS_PORT=8444
+ENV KC_LOG_LEVEL=INFO
+ENV KC_HOSTNAME_STRICT_HTTPS=false
+ENV KC_PROXY=passthrough
+ENV KC_PROXY_HEADERS=xforwarded
+ENV KEYCLOAK_ADMIN=$ADMIN
+ENV KEYCLOAK_ADMIN_PASSWORD=$ADMIN_PASSWORD
+ENV KC_DB_URL=jdbc:postgresql://${DB_URL}:${DB_PORT}/${DB_DATABASE}
+
+# Build with postgres support
+RUN /opt/keycloak/bin/kc.sh build --db=postgres
+
+FROM quay.io/keycloak/keycloak:latest
+COPY --from=builder /opt/keycloak/ /opt/keycloak/
+
+ARG ADMIN
+ARG ADMIN_PASSWORD
+ARG DB_USERNAME
+ARG DB_PASSWORD
+ARG DB_URL
+ARG DB_DATABASE
+ARG DB_PORT
+
+ENV KC_HTTP_RELATIVE_PATH=/auth
+ENV PROXY_ADDRESS_FORWARDING=true
+ENV KC_DB_USERNAME=$DB_USERNAME
+ENV KC_DB_PASSWORD=$DB_PASSWORD
+ENV KC_HOSTNAME_STRICT=false
+ENV KC_HOSTNAME=your-service-name.onrender.com
+ENV KC_HOSTNAME_ADMIN=your-service-name.onrender.com
+ENV KC_HTTP_ENABLED=true
+ENV KC_HTTP_PORT=8443
+ENV KC_HTTPS_PORT=8444
+ENV KC_LOG_LEVEL=INFO
+ENV KC_HOSTNAME_STRICT_HTTPS=false
+ENV KC_PROXY=passthrough
+ENV KC_PROXY_HEADERS=xforwarded
+ENV KEYCLOAK_ADMIN=$ADMIN
+ENV KEYCLOAK_ADMIN_PASSWORD=$ADMIN_PASSWORD
+ENV KC_DB_URL=jdbc:postgresql://${DB_URL}:${DB_PORT}/${DB_DATABASE}
+
+EXPOSE 8443
+EXPOSE 8444
+
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
+# Don't use --optimized here, it breaks postgres support (known KC bug)
+CMD ["start", "--db=postgres"]
